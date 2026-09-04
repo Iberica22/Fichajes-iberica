@@ -1,0 +1,14 @@
+{
+  "companyName": "Ibérica Seguridad",
+  "locations": [
+    {
+      "name": "Centro principal",
+      "latitude": 36.8426326,
+      "longitude": -2.4529627,
+      "allowedRadiusMeters": 120
+    }
+  ],
+  "employees": [
+    { "id": "empleado", "name": "Empleado", "pin": "CAMBIAR" }
+  ]
+}
