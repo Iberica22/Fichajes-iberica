@@ -188,16 +188,22 @@ app.get('/export.csv', async (req, reply) => {
 function calculateSummary(rows) {
   const groups = new Map();
   for (const row of rows.filter(item => item.inside_radius)) {
-    if (!groups.has(row.employee_id)) groups.set(row.employee_id,{ name:row.employee_name, punches:0, milliseconds:0, incomplete:0, open:null, pausedAt:null });
+    if (!groups.has(row.employee_id)) groups.set(row.employee_id,{ name:row.employee_name, punches:0, milliseconds:0, incomplete:0, shiftOpen:false, activeSince:null });
     const summary = groups.get(row.employee_id); summary.punches++;
     const moment = new Date(row.created_at).getTime();
-    if (row.kind === 'entrada') { if (summary.open !== null) summary.incomplete++; summary.open = moment; summary.pausedAt = null; }
-    else if (row.kind === 'pausa' && summary.open !== null && summary.pausedAt === null) summary.pausedAt = moment;
-    else if (row.kind === 'vuelta' && summary.pausedAt !== null) { summary.milliseconds -= moment - summary.pausedAt; summary.pausedAt = null; }
-    else if (row.kind === 'salida' && summary.open !== null) { summary.milliseconds += moment - summary.open; summary.open = null; summary.pausedAt = null; }
-    else summary.incomplete++;
+    if (row.kind === 'entrada') {
+      if (summary.shiftOpen) summary.incomplete++;
+      summary.shiftOpen = true; summary.activeSince = moment;
+    } else if (row.kind === 'pausa' && summary.shiftOpen && summary.activeSince !== null) {
+      summary.milliseconds += moment - summary.activeSince; summary.activeSince = null;
+    } else if (row.kind === 'vuelta' && summary.shiftOpen && summary.activeSince === null) {
+      summary.activeSince = moment;
+    } else if (row.kind === 'salida' && summary.shiftOpen) {
+      if (summary.activeSince !== null) summary.milliseconds += moment - summary.activeSince;
+      summary.shiftOpen = false; summary.activeSince = null;
+    } else summary.incomplete++;
   }
-  for (const summary of groups.values()) if (summary.open !== null || summary.pausedAt !== null) summary.incomplete++;
+  for (const summary of groups.values()) if (summary.shiftOpen) summary.incomplete++;
   return [...groups.values()];
 }
 
